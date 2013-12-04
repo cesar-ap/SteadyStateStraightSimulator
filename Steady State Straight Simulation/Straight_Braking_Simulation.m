@@ -1,0 +1,135 @@
+function [speed_kmh, deceleration, Ff, Fd, t] = Straight_Braking_Simulation(Total_Mass...
+    , Brakes_G_Force, drag_coef, Area, air_t, atm_p, V_final, straight_length...
+    , rolling_coef, g)
+%STRAIGHT_BRAKING_SIMULATION Summary of this function goes here
+
+% Performance Simulator v0.1
+% Date: 28-11-2013
+% Author: César Álvarez Porras (www.cesar-ap.com)
+
+% Script: Calculates time spent in an braking sector given the initial
+% speed and final speed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                                                                     %%%
+%%%                         Variables Declaration                       %%%
+%%%                                                                     %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% g=9.81;
+% % Vehicle Parameters
+% Total_Mass = 1200; % Kg
+% Brakes_G_Force = 1; % G
+% 
+% % Aerodynamic
+% drag_coef = 0.335;% at 20 FRH and 40 RRH
+% Area = 1.475;% m^2
+% 
+% % Scenario
+% air_t = 23;% C degrees
+% atm_p = 1000;% mbar
+% rolling_coef = 0.696;
+% 
+% V_final = 1;% Km/h
+% straight_length = 20;% m
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                                                                     %%%
+%%%                                 Execution                           %%%
+%%%                                                                     %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+distance=linspace(1,straight_length,straight_length); % generate array of distances
+
+speed = zeros(1,straight_length); % array to keep speed (m/s) on every point
+speed_kmh = zeros(1,straight_length); % array to keep speed (kmh) on every point
+deceleration = zeros(1,straight_length); % array to keep aceleration on every point
+t = zeros(1,straight_length); % array to keep t spent on every point
+Fr = zeros(1,straight_length); % array to keep Fr on every point
+Fd = zeros(1,straight_length); % array to keep Fd on every point
+Fb = zeros(1,straight_length); % array to keep Fw on every point
+Ff = zeros(1,straight_length); % array to keep Ff on every point
+
+speed(end) = V_final*0.27; % load final speed  (m/s)
+speed_kmh(end) = V_final; % load final speed  (Km/h)
+
+
+for i=straight_length:-1:2
+    % Calculates the previous sample speed based on the current sample
+    % Calculate the Braking Force
+    Fb(i) = Brakes_Force(Brakes_G_Force, Total_Mass);
+    % Calculate the Rolling Resistance
+    Fr(i) = Rolling_Resistance(speed(i),rolling_coef, Total_Mass, g);
+    % Calculate the Aero Downforce Resistance
+    Fd(i) = Aero_Resistance(drag_coef, Area, air_t, atm_p, speed(i));
+    % calcualtes the combined Forces
+    Ff(i) = Fb(i)+Fr(i)+Fd(i);
+
+    % Calculates the instant Acceleration
+    deceleration(i) = Ff(i) / Total_Mass;
+    % Calcualtes the distance covered
+    space = distance(i)-distance(i-1);
+    % Calculates the time spent on this sample
+    t(i) = space / speed(i);
+    % Calculates the instant Speed      
+    speed(i-1) = deceleration(i) * t(i) + speed(i); % Next sample speed is current speed and current acceleration
+    speed_kmh(i-1) = speed(i-1) / 0.27; % speed expressed in Km/h
+end
+
+
+for i=1 % Fill the first sample of data
+    % Calculate the Braking Force
+    Fb(i) = Brakes_Force(Brakes_G_Force, Total_Mass);
+    % Calculate the Rolling Resistance
+    Fr(i) = Rolling_Resistance(speed(i),rolling_coef, Total_Mass, g);
+    % Calculate the Aero Downforce Resistance
+    Fd(i) = Aero_Resistance(drag_coef, Area, air_t, atm_p, speed(i));
+    % calcualtes the combined Forces
+    Ff(i) = Fb(i)+Fr(i)+Fd(i);
+    % Calculates the instant Acceleration
+    deceleration(i) = Ff(i) / Total_Mass;   
+    % Calcualtes the distance covered    
+    space = distance(i)-distance(i+1);
+    % Calculates the time spent on this sample  
+    t(i) = space / speed(i);
+end
+
+V_initial = speed_kmh(1);
+
+sector_time = 0;
+for i=1:length(t)
+    sector_time = sector_time + t(i);
+end
+
+fprintf('The time needed to cover a %d m length straight braking down to %d Km/h from %d Km/h is %d seconds\n', straight_length, V_final, V_initial, sector_time);
+
+    
+% % Plotting Values
+% set(figure,'Name','Outputs','NumberTitle','off');
+% subplot(4,1,1);
+% plot(distance,speed_kmh);
+% ylabel('Speed [Km/h]');
+% grid on;
+% subplot(4,1,2);
+% plot(distance,Ff);
+% ylabel('Total Braking Force [N]');
+% grid on;
+% subplot(4,1,3);
+% plot(distance,Fd);
+% ylabel('Aero Braking Force [N]');
+% grid on;
+% subplot(4,1,4);
+% plot(distance,deceleration);
+% xlabel('Time');
+% ylabel('Deceleration [m/s^2]');
+% grid on;
+
+end
